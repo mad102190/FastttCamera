@@ -16,6 +16,8 @@
 #import "FastttZoom.h"
 #import "FastttFilter.h"
 #import "FastttCapturedImage+Process.h"
+#import "UIImage+FastttFilters.h"
+
 
 @interface FastttFilterCamera () <FastttFocusDelegate, FastttZoomDelegate>
 
@@ -25,6 +27,7 @@
 @property (nonatomic, strong) GPUImageStillCamera *stillCamera;
 @property (nonatomic, strong) FastttFilter *fastFilter;
 @property (nonatomic, strong) GPUImageView *previewView;
+@property (nonatomic, strong) GPUImageOutput<GPUImageInput>*baseFilter;
 @property (nonatomic, assign) BOOL deviceAuthorized;
 @property (nonatomic, assign) BOOL isCapturingImage;
 
@@ -401,6 +404,10 @@
     [_stillCamera removeAllTargets];
     [self.fastFilter.filter removeAllTargets];
     
+    // add an initial filter below the actual fastFilter to allow preserving the original image.
+    self.baseFilter = [[GPUImageFilter alloc] init];
+    [_stillCamera addTarget:self.baseFilter];
+    
     [_stillCamera addTarget:self.fastFilter.filter];
     [self.fastFilter.filter addTarget:_previewView];
 }
@@ -525,7 +532,7 @@
 
     UIImageOrientation outputImageOrientation = [self _outputImageOrientation];
 
-    [_stillCamera capturePhotoAsImageProcessedUpToFilter:self.fastFilter.filter withOrientation:UIImageOrientationUp withCompletionHandler:^(UIImage *processedImage, NSError *error){
+    [_stillCamera capturePhotoAsImageProcessedUpToFilter:self.baseFilter withOrientation:UIImageOrientationUp withCompletionHandler:^(UIImage *processedImage, NSError *error){
         
         if (self.isCapturingImage) {
             [self _processCameraPhoto:processedImage needsPreviewRotation:needsPreviewRotation imageOrientation:outputImageOrientation previewOrientation:previewOrientation];
@@ -562,6 +569,7 @@
         UIImage *fixedOrientationImage = [image fastttRotatedImageMatchingOrientation:imageOrientation];
 
         FastttCapturedImage *capturedImage = [FastttCapturedImage fastttCapturedFullImage:fixedOrientationImage];
+
         
         [capturedImage cropToRect:cropRect
                    returnsPreview:(fromCamera && self.returnsRotatedPreview)
@@ -571,8 +579,14 @@
                          if (fromCamera && !self.isCapturingImage) {
                              return;
                          }
-                         capturedImage.rotatedPreviewImage = [capturedImage.rotatedPreviewImage fastttRotatedImageMatchingOrientation:UIImageOrientationUp];
                          
+                         capturedImage.unfilteredImage = capturedImage.fullImage;
+                         
+                         // Leave the filtered image as the fullImage to maintain backwards compatibility
+                         capturedImage.fullImage = [capturedImage.fullImage fastttFilteredImageWithFilter:self.filterImage];
+                         
+                         capturedImage.rotatedPreviewImage = [capturedImage.fullImage fastttRotatedImageMatchingOrientation:UIImageOrientationUp];
+                                                  
                          if ([self.delegate respondsToSelector:@selector(cameraController:didFinishCapturingImage:)]) {
                              dispatch_async(dispatch_get_main_queue(), ^{
                                  [self.delegate cameraController:self didFinishCapturingImage:capturedImage];
