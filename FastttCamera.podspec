@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "FastttCamera"
-  s.version          = "0.3.3"
+  s.version          = "0.3.4"
   s.summary          = "A fast, straightforward implementation of AVFoundation camera with customizable real-time photo filters."
   s.homepage         = "https://github.com/IFTTT/FastttCamera"
   s.license          = 'MIT'
@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
                           "Max Meyers" => "max@ifttt.com",
                           "Devin Foley" => "devin@ifttt.com" 
                        }
-  s.source           = { :git => "https://github.com/IFTTT/FastttCamera.git", :tag => s.version.to_s }
+  s.source           = { :git => "https://github.com/mad102190/FastttCamera.git", :tag => s.version.to_s }
   s.social_media_url = 'https://twitter.com/skelovenko'
   s.platform         = :ios, '7.0'
   s.requires_arc     = true
